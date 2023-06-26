@@ -30,6 +30,7 @@ from subprocess import call
 import numpy as np
 import pandas as pd
 from pandas import read_csv
+#from ps_cylindrical_getroots import loop
 
 
 # import antigravity	# xkcd.com/353/
@@ -96,6 +97,7 @@ class qdyn:
         set_dict["FEAT_STRESS_COUPL"] = 0	# Normal stress coupling
         set_dict["FEAT_TP"] = 0				# Thermal pressurisation
         set_dict["FEAT_LOCALISATION"] = 0	# Gouge zone localisation of strain (CNS only)
+        set_dict["FEAT_INJECTION"] = 0	    # Constant fluid injection
 
         # Rate-and-state friction parameters
         set_dict["SET_DICT_RSF"] = {
@@ -156,6 +158,28 @@ class qdyn:
             "P_A": 0.0,							# Ambient fluid pressure [Pa]
             "T_A": 293.0,						# Ambient temperature [K]
             "DILAT_FACTOR": 0.0,                # Factor > 0 to control amount of dilatancy hardening
+        }
+
+        # Fluid injection model
+        set_dict["SET_DICT_INJECTION"] = {
+            "DP_DT": 0.0,                       # Fluid injection rate [Pa/s]
+            "P_A": 0.0,                          #Ambient fluid pressure (constant) [Pa]
+            "p_a" : 0.0,                         # Pa = P_a
+            "q" : -0.025,                        #m^3/s
+            "B0" : 1.0,
+            "muv" : 0.09e-3,                    # Pa.s
+            "k*" : 1e-17,                        #m^2
+            "fi" : 0.05,
+            "ct" : 1.45e-10,
+            "h" : 500,                          # m
+            "rw" : 0.10,                        # m
+            "re" : 500,                         # m
+            "nroots" : 10,
+            "an" : 0.0, 
+            "t0" : 0.0,                           
+            "tf" : 0.0,                           # time of the injection
+            "Y0" : 0.0,                           # point of injection along depth (2D case)
+            "X0" : 0.0,                           # Point of injection
         }
 
         # Benjamin Idini's damage model
@@ -250,6 +274,7 @@ class qdyn:
         mesh_params_creep = ("A", "N", "M")
         mesh_params_localisation = ("LOCALISATION", "PHI_INI_BULK")
         mesh_params_TP = ("RHOC", "BETA", "ETA", "HALFW", "K_T", "K_P", "LAM", "P_A", "T_A", "DILAT_FACTOR")
+        mesh_params_injection = ("DP_DT", "P_A","p_a", "q", "B0", "muv", "k*", "fi", "ct", "h")
 
         mesh_dict = {}
 
@@ -288,6 +313,17 @@ class qdyn:
         if settings["FEAT_TP"] == 1:
             for param in mesh_params_TP:
                 mesh_dict[param] = np.ones(N)*settings["SET_DICT_TP"][param]
+
+        # Populate mesh with fluid injection parameters
+        if settings["FEAT_INJECTION"] >= 1:  # Silvio
+
+            if settings["FEAT_TP"] == 1:
+                print("The fluid injection model is incompatible with the thermal pressurisation model.")
+                print("Set either FEAT_TP = 0 or FEAT_INJECTION = 0")
+                exit()
+
+            for param in mesh_params_injection:
+                mesh_dict[param] = np.ones(N)*settings["SET_DICT_INJECTION"][param]
 
         # Mesh XYZ coordinates (and dip angle)
         mesh_dict["X"] = np.zeros(N)
@@ -395,7 +431,7 @@ class qdyn:
                     print("This value should be determined in render_mesh()")
                     exit()
                 input_str += "%u%s N_creep\n" % (N_creep, delimiter)
-            input_str += "%u %u %u%s stress_coupling, thermal press., localisation\n" % (settings["FEAT_STRESS_COUPL"], settings["FEAT_TP"], settings["FEAT_LOCALISATION"], delimiter)
+            input_str += "%u %u %u %u%s stress_coupling, thermal press., localisation, injection\n" % (settings["FEAT_STRESS_COUPL"], settings["FEAT_TP"], settings["FEAT_LOCALISATION"], settings["FEAT_INJECTION"], delimiter)
             input_str += "%u %u %u %u %u %u %u %u %u%s ntout_ot, ntout_ox, nt_coord, nxout, nwout, nxout_DYN, nwout_DYN, ox_seq, ox_DYN\n" % (settings["NTOUT_OT"], settings["NTOUT"], settings["IC"]+1, settings["NXOUT"], settings["NWOUT"], settings["NXOUT_DYN"], settings["NWOUT_DYN"], settings["OX_SEQ"], settings["OX_DYN"], delimiter)
             input_str += "%.15g %.15g %.15g %.15g %.15g %.15g%s beta, smu, lambda, v_th\n" % (settings["VS"], settings["MU"], settings["LAM"], settings["D"], settings["HD"], settings["V_TH"], delimiter)
             input_str += "%.15g %.15g%s Tper, Aper\n" % (settings["TPER"], settings["APER"], delimiter)
@@ -443,6 +479,18 @@ class qdyn:
             if settings["FEAT_TP"] == 1:
                 for i in range(nloc):
                     input_str += "%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n" % (mesh["RHOC"][iloc[i]], mesh["BETA"][iloc[i]], mesh["ETA"][iloc[i]], mesh["HALFW"][iloc[i]], mesh["K_T"][iloc[i]], mesh["K_P"][iloc[i]], mesh["LAM"][iloc[i]], mesh["P_A"][iloc[i]], mesh["T_A"][iloc[i]], mesh["DILAT_FACTOR"][iloc[i]])
+            
+            # Check if thermal pressurisation is requested
+            if settings["FEAT_INJECTION"] == 1:
+                for i in range(nloc):
+                    input_str += "%.15g %.15g\n" % (mesh["DP_DT"][iloc[i]], mesh["P_A"][iloc[i]])
+                    
+            #Silvio Galis        
+            if settings["FEAT_INJECTION"] == 2:
+                for i in range(nloc):
+                  input_str += "%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n" % (mesh["p_a"][iloc[i]],mesh["q"][iloc[i]], mesh["B0"][iloc[i]], mesh["muv"][iloc[i]], mesh["k*"][iloc[i]], mesh["fi"][iloc[i]], mesh["ct"][iloc[i]], mesh["h"][iloc[i]]) #settings["nroots"], delimiter) [iloc[i]]
+#Roots?
+                
 
             # Add mesh grid location information
             for i in range(nloc):
@@ -541,6 +589,10 @@ class qdyn:
         if self.set_dict["FEAT_TP"] == 1:
             nheaders_ot += 1
             quants_ot += ("P", "T")
+        
+        if self.set_dict["FEAT_INJECTION"] >= 1:
+            nheaders_ot += 1
+            quants_ot += ("P",)
 
         # Vmax
         nheaders_vmax = 2
@@ -549,10 +601,17 @@ class qdyn:
             nheaders_vmax += 1
             quants_vmax += ("P", "T")
 
+        if self.set_dict["FEAT_INJECTION"] >= 1:
+            nheaders_vmax += 1
+            quants_vmax += ("P",)
+
         # Standard snapshots (ox)
         quants_ox = ("t", "x", "y", "z", "v", "theta", "tau", "tau_dot", "slip", "sigma")
         if self.set_dict["FEAT_TP"] == 1:
             quants_ox += ("P", "T")
+
+        if self.set_dict["FEAT_INJECTION"] >= 1:
+            quants_ox += ("P",)
 
         # If time series data is requested
         if read_ot:
@@ -590,7 +649,7 @@ class qdyn:
             # Store snapshot data in self.ox
             self.ox = data_ox
 
-            # Sanitise output (check for near-infinite numbers, etc.)
+            # Sanitise output (chRootseck for near-infinite numbers, etc.)
             self.ox = self.ox.apply(pd.to_numeric, errors="coerce")
 
             # If free surface was generated manually (i.e. without FINITE = 2 or 3),

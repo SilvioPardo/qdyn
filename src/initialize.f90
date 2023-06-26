@@ -18,7 +18,7 @@ subroutine init_all(pb)
   use friction, only : set_theta_star, friction_mu
   use friction_cns, only : compute_velocity, dphi_dt
   use solver, only : init_rk45
-  use diffusion_solver, only: init_tp
+  use diffusion_solver, only: init_tp !,init_inje2
   use ode_rk45_2, only : init_rk45_2
   use output, only: initialize_output
 !!$  use omp_lib
@@ -86,6 +86,12 @@ subroutine init_all(pb)
     call init_tp(pb)
     write(6,*) "Spectral mesh initiated"
   endif
+  ! Pardo: initialize permeability parameter (diffusion_solver.f90)
+ ! if (pb%features%injection == 2) then
+ !   call init_inje2(pb)
+ ! endif
+
+
 
   ! SEISMIC: the CNS model has the initial shear stress defined in the
   ! input file, so we can skip the initial computation of friction

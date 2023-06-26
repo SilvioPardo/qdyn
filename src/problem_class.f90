@@ -64,13 +64,27 @@ module problem_class
   end type tp_type
   ! End of the TP model structure
 
+  ! Structure that holds the fluid injection model parameters
+  ! See input.f90 for a description of the parameters
+  type injection_type
+    !double precision, dimension(:), allocatable :: k_min, k_max !p_a, DP_DT, dk_dt, FMCk, qBmkh   
+    double precision :: p_a = 0d0, dP_dt = 0d0, q = -0.002d0, B0 = 1d0, fi = 0.30d0, &
+                        muv = 0.09d-3, ct = 1.45d-10, k = 1d-15, k_min = 1d-18, k_max = 1d-14, &  ! k_min = 1d-18, k_max = 1d-14
+                        rw = 0.10d0, re = 500, h = 500, nroots = 10, t0 = 0d0, tf = 0d0, Y0 = 0d0, X0 = 0d0, theta = 30d0  !q = -0.002d0, B0 = 1d0, muv = 0.09d-3, k = 1d-12, ct = 1.45d-10, fi = 0.30d0 &        
+    real, dimension(10) :: an = (/0.000766341288526, 0.001403117645524,0.002034694279645,0.002664739504977, &
+                                  0.003294127716977, 0.003923174121984, 0.004552020133089, 0.005180738635555, &
+                                  0.005809371010047 ,  0.006437942494247/)                    
+  end type injection_type
+  ! End of the fluid injection structure  
+  ! End of the fluid injection structure
+
   ! SEISMIC: requested features structure
   ! stress_coupling: normal stress variations at subduction interfaces
   ! tp: thermal pressurisation
   ! cohesion: time-dependent cohesion (CNS model)
   ! localisation: localisation of deformation (CNS model)
   type features_type
-    integer :: stress_coupling, tp, localisation
+    integer :: stress_coupling, tp, localisation, injection
   end type features_type
   ! End of features structure
 
@@ -158,6 +172,7 @@ module problem_class
     ! SEISMIC: added structures
     type (cns_type) :: cns_params
     type (tp_type) :: tp
+    type (injection_type) :: injection
     type (features_type) :: features
     type (rk45_type) :: rk45
     type (rk45_2_type) :: rk45_2

@@ -10,8 +10,10 @@ EXEC_PATH = .
 
 # GNU, serial
 #Only MPI no openMP
-F90 = mpif90
-OPT = -O3 -Wall
+F90 = /usr/bin/mpif90
+OPT = -03 -Wall
+#F90 = ./bin/mpif90
+#F90 = /home/silvio/anaconda3/bin/mpif90
 # For parallel runs with MPI+OpenMP:
 #F90 = mpif90
 #OPT = -O3 -Wall -fopenmp

@@ -40,17 +40,84 @@ subroutine read_main(pb)
   if (pb%i_rns_law == 3) then
     read(FID_IN, *) pb%cns_params%N_creep
   endif
-  read(FID_IN, *) pb%features%stress_coupling, pb%features%tp, pb%features%localisation
+  read(FID_IN, *) pb%features%stress_coupling, pb%features%tp, &
+                  pb%features%localisation, pb%features%injection
   read(FID_IN, *) pb%ot%ntout, pb%ox%ntout, pb%ot%ic, pb%ox%nxout, pb%ox%nwout, &
-             pb%ox%nxout_dyn, pb%ox%nwout_dyn, pb%ox%i_ox_seq, pb%ox%i_ox_dyn
+                  pb%ox%nxout_dyn, pb%ox%nwout_dyn, pb%ox%i_ox_seq, pb%ox%i_ox_dyn
   read(FID_IN, *) pb%beta, pb%smu, pb%lam, pb%D, pb%H, pb%ot%v_th
   read(FID_IN, *) pb%Tper, pb%Aper
-  read(FID_IN, *) pb%dt_try, pb%dt_max,pb%tmax, pb%acc
+  read(FID_IN, *) pb%dt_try, pb%dt_max, pb%tmax, pb%acc
   read(FID_IN, *) pb%NSTOP
   read(FID_IN, *) pb%DYN_FLAG,pb%DYN_SKIP
   read(FID_IN, *) pb%DYN_M,pb%DYN_th_on,pb%DYN_th_off
   read(FID_IN, *) FAULT_TYPE, SOLVER_TYPE
   write(FID_SCREEN, *) '  Flags input complete'
+
+  ! MvdE: if fluid injection (analytical) is requested, read parameters
+  if ((pb%features%injection == 1) .or. (pb%features%injection == 2)) then
+  
+    ! Check if thermal pressurisation is also active
+    if (pb%features%tp == 1) then
+      write(FID_SCREEN, *) &
+        "Fluid injection is not compatible with thermal pressurisation"
+      stop
+    endif
+ !   allocate(  pb%injection%p_i(n), &                                                       ! Silvio edit
+  !             pb%injection%q(n), pb%injection%B(n), pb%injection%muv(n), pb%injection%k(n), &
+   !            pb%injection%fi(n), pb%injection%ct(n), pb%injection%h(n), pb%injection%rw(n), &
+   !            pb%injection%re(n), pb%injection%nroots(n), pb%injection%t0(n), pb%injection%Y0(n), &
+   !            pb%injection%X0(n), pb%injection%an(n)  )
+   ! do i=1,n
+   ! read(FID_IN, *) pb%injection%p_a,pb%injection%q, pb%injection%B0, pb%injection%muv, &
+   !                 pb%injection%k, pb%injection%fi, pb%injection%ct, pb%injection%h, &
+   !                 pb%injection%rw, pb%injection%re, pb%injection%nroots, pb%injection%t0, &
+   !                 pb%injection%Y0, pb%injection%X0, pb%injection%an, pb%injection%tf
+   
+   ! write(FID_SCREEN, *) "p_a, q, B0, muv, k, fi, ct, h, rw, re, nroots, t0, Y0, X0, tf ", &
+   !                    pb%injection%p_a, pb%injection%q, pb%injection%B0, pb%injection%muv, pb%injection%k, & ! Silvio edits
+   !                    pb%injection%fi, pb%injection%ct, pb%injection%h, pb%injection%rw, &
+   !                    pb%injection%re, pb%injection%nroots, pb%injection%t0, pb%injection%Y0, &
+   !                    pb%injection%X0, pb%injection%an, pb%injection%tf                    
+    !end do
+  !endif
+
+    ! Source location, source time, injection rate, diffusivity ! Silvio Edit
+    pb%injection%p_a = 0d0
+    pb%injection%q = -0.025d0
+    pb%injection%B0 = 1d0
+    pb%injection%muv = 0.09d-3
+    pb%injection%k = 1d-14
+    pb%injection%k_min = 1d-18
+    pb%injection%k_max = 1d-14            
+    pb%injection%fi = 0.15d0
+    pb%injection%ct = 1.45d-10
+    pb%injection%h = 500
+    pb%injection%rw = 0.10d0
+    pb%injection%re = 1000
+    pb%injection%nroots = 10
+    pb%injection%t0 = 37559376000.
+    pb%injection%tf = 44150400
+    pb%injection%Y0 = 0d0
+    pb%injection%X0 = 0d0
+    pb%injection%theta = 0.8726d0
+    pb%injection%an = (/0.0008, 0.0014, 0.002, 0.0027, 0.0033, 0.0039, 0.0046, 0.0052, 0.0058, 0.0064/)
+    pb%injection%an = (/0.000383170608831, 0.000701558705927, 0.001017346895086, 0.001332369333348, & 
+                       0.001647063218443, 0.001961586153544, 0.002276008845199, 0.002590367736046, &
+                      0.002904683516422, 0.003847477786348/)   
+    !pb%injection%an = (/0.000766341288526, 0.001403117645524,0.002034694279645,0.002664739504977, &
+    !                  0.003294127716977, 0.003923174121984, 0.004552020133089, 0.005180738635555, &
+    !                  0.005809371010047 ,  0.006437942494247/)
+    !read(FID_IN, *) pb%injection%p_i, pb%injection%q, pb%injection%B0, pb%injection%muv, pb%injection%k, &
+     !               pb%injection%fi, pb%injection%ct, pb%injection%h, pb%injection%rw, &
+      !              pb%injection%re, pb%injection%nroots, pb%injection%t0, pb%injection%Y0, &
+       !             pb%injection%X0, pb%injection%an
+  endif
+ ! write(FID_SCREEN, *) pb%injection%p_i, pb%injection%q, pb%injection%B0, pb%injection%muv, pb%injection%k, & ! Silvio edits
+ !                      pb%injection%fi, pb%injection%ct, pb%injection%h, pb%injection%rw, &
+ !                      pb%injection%re, pb%injection%nroots, pb%injection%t0, pb%injection%Y0, &
+ !                      pb%injection%X0, pb%injection%tf
+ !write(FID_SCREEN, *) '10 roots',pb%injection%an
+ ! write(FID_SCREEN, *) '  Flags input complete'
 
   n = mesh_get_size(pb%mesh) ! number of nodes in this processor
   allocate ( pb%tau(n), pb%sigma(n), pb%v(n), pb%theta(n),  &
@@ -240,6 +307,58 @@ subroutine read_main(pb)
   endif
   ! End reading TP model parameters
   ! </SEISMIC>
+
+  ! Read input parameters for the fluid injection model.
+  
+  !   dP_dt:  constant rate of pressure increase [Pa/s]
+  !   P_a:    ambient (constant) fluid pressure [Pa]
+  
+  if ((pb%features%injection == 1) .or. (pb%features%injection == 2)) then !Silvio
+  
+    if (pb%features%tp == 1) then
+      write(FID_SCREEN, *) &
+        "The fluid injection module is incompatible with the thermal pressurisation module"
+      stop
+    endif
+  endif
+ !   allocate (pb%injection%p_a(n), pb%injection%dP_dT(n), pb%injection%FMCk(n), pb%injection%qBmkh(n), &
+ !             pb%injection%dk_dt(n))
+              !pb%injection%q(n), pb%injection%B0(n), pb%injection%muv(n), &
+              !pb%injection%k(n), pb%injection%fi(n), pb%injection%ct(n), pb%injection%h(n), &
+              !pb%injection%rw(n), pb%injection%re(n), pb%injection%nroots(n), pb%injection%t0(n), &
+              !pb%injection%Y0(n), pb%injection%X0(n), pb%injection%an(n), pb%injection%tf(n))
+ !   do i=1,n
+ !    read(FID_IN, *) pb%injection%p_a(i), pb%injection%dP_dT(i), pb%injection%FMCk(i), pb%injection%qBmkh(i), &
+ !                    pb%injection%dk_dt(i)
+                     !pb%injection%q(i), pb%injection%B0(i), pb%injection%muv(i), &
+                     !pb%injection%k(i), pb%injection%fi(i), pb%injection%ct(i), pb%injection%h(i), &
+                     !pb%injection%rw(i), pb%injection%re(i), pb%injection%nroots(i), pb%injection%t0(i), &
+                     !pb%injection%Y0(i), pb%injection%X0(i), pb%injection%an(i), pb%injection%tf(i)
+ !   end do
+ !   write(FID_SCREEN, *) "p_a, dP_dt, FMCk, qBmkh, dk_dt", pb%injection%p_a, pb%injection%dP_dt, &
+ !                        pb%injection%FMCk, pb%injection%qBmkh, pb%injection%dk_dt 
+ ! endif
+    ! Read input parameters for the fluid injection model.
+  
+  !   dP_dt:  constant rate of pressure increase [Pa/s] ! Silvio Edit, first attempt. Now modified reading constant values from py files
+  !   P_a:    ambient (constant) fluid pressure [Pa]
+!  if (pb%features%injection == 2) then 
+ !   if (pb%features%tp == 1) then
+  !    write(FID_SCREEN, *) &
+   !     "The fluid injection module is incompatible with the thermal pressurisation module"
+    !  stop
+   ! endif
+
+    !allocate (pb%injection%p_i(n), pb%injection%q(n), pb%injection%B(n), pb%injection%muv(n), pb%injection%k(n), pb%injection%fi(n), &
+     !         pb%injection%ct(n), pb%injection%h(n), pb%injection%rw(n), pb%injection%re(n)) ! What about roots?
+            
+                   
+   ! do i=1,n
+   !   read(FID_IN, *) pb%injection%p_i(i), pb%injection%q(i), pb%injection%B(i), pb%injection%muv(i), pb%injection%k(i), pb%injection%fi(i), &
+   !           pb%injection%ct(i), pb%injection%h(i), pb%injection%rw(i), pb%injection%re(i) ! What about roots?
+   ! end do
+ ! endif  
+  ! End reading fluid injection model parameters
 
   if (pb%mesh%dim == 2 .and. is_MPI_parallel()) then
     call read_mesh_nodes(FID_IN, pb%mesh)
